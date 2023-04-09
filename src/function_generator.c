@@ -6,6 +6,7 @@
 #include "hardware/adc.h"
 
 #define DAC_RESOLUTION 8
+#define MAX_VALUE 8 * 8 - 1 //255 right?
 #define R2R_PIN_START 0
 #define ADC_PIN 26
 #define SAMPLES_PER_CYCLE 128
@@ -16,12 +17,22 @@
 const double PI = 3.14159265358979323846;
 
 uint8_t sine_wave[SAMPLES_PER_CYCLE];
+uint8_t ramp[SAMPLES_PER_CYCLE];
+
+uint8_t custom_function[SAMPLES_PER_CYCLE];
 
 void generate_sine_wave() {
     for (uint i = 0; i < SAMPLES_PER_CYCLE; i++) {
         sine_wave[i] = (uint8_t)((sin(i * (2.0 * PI / SAMPLES_PER_CYCLE)) + 1.0) * 127.5);
     }
 }
+
+void generate_ramp(){
+    for (int i = 0; i < SAMPLES_PER_CYCLE; i++){
+        ramp[i] = (int)MAX_VALUE/SAMPLES_PER_CYCLE * i;
+    }
+}
+
 
 void set_dac_value(uint8_t value) {
     for (uint i = 0; i < DAC_RESOLUTION; i++) {
