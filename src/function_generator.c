@@ -6,13 +6,13 @@
 #include "hardware/adc.h"
 
 #define DAC_RESOLUTION 8
-#define MAX_VALUE 8 * 8 - 1 //255 right?
 #define R2R_PIN_START 0
 #define ADC_PIN 26
 #define SAMPLES_PER_CYCLE 128
-#define ADC_RANGE_VOLTS 1.6f
-#define MAX_FREQUENCY 100000.0f
-#define MIN_FREQUENCY 1.0f
+#define MAX_FREQUENCY 20000.0
+#define MIN_FREQUENCY 100.0
+
+const uint MAX_VALUE = pow(2,8) - 1;
 
 const double PI = 3.14159265358979323846;
 
@@ -29,25 +29,30 @@ void generate_sine_wave() {
 
 void generate_ramp(){
     for (int i = 0; i < SAMPLES_PER_CYCLE; i++){
-        ramp[i] = (int)MAX_VALUE/SAMPLES_PER_CYCLE * i;
+        ramp[i] = (uint8_t) MAX_VALUE/SAMPLES_PER_CYCLE * i;
     }
 }
 
+void mix_functions(uint8_t * array_1, uint8_t * array_2){
+    //Get array length
+    for (int i = 0; i < SAMPLES_PER_CYCLE; i++){
+        custom_function[i] = array_1[i] / 2 + array_2[i] / 2;
+    }
+}
 
 void set_dac_value(uint8_t value) {
-    for (uint i = 0; i < DAC_RESOLUTION; i++) {
-        gpio_put(R2R_PIN_START + i, (value >> i) & 1);
+    for (int bit = 0; bit < DAC_RESOLUTION; bit++) {
+        if ((value >> bit) & 0x01) {
+            sio_hw->gpio_set = (1 << bit);
+        } else {
+            sio_hw->gpio_clr = (1 << bit);
+        }
     }
 }
 
 float read_adc() {
     uint32_t adc_value = adc_read();
-    float voltage = (float)adc_value / 4095.0f * 3.3f; // Convert to voltage (0-3.3V)
-    float normalized_value = voltage / ADC_RANGE_VOLTS;
-    if (normalized_value > 1.0f) {
-        normalized_value = 1.0f;
-    }
-    return normalized_value;
+    return (float)adc_value / 4095.0f;
 }
 
 int main() {
@@ -65,14 +70,18 @@ int main() {
     adc_select_input(0);
 
     generate_sine_wave();
+    generate_ramp();
+    uint8_t *waveform = sine_wave;
+
+    uint i;
 
     while (1) {
-        uint8_t *waveform = sine_wave;
-        float adc_value = read_adc();
-        float frequency = MIN_FREQUENCY + (MAX_FREQUENCY - MIN_FREQUENCY) * adc_value;
+
+        float adc_value = read_adc();  // [0 , 1]
+        float frequency = (uint16_t)MIN_FREQUENCY + (MAX_FREQUENCY - MIN_FREQUENCY) * adc_value;
         float delay_us = (1e6 * (1 / frequency)) / SAMPLES_PER_CYCLE;
 
-        for (uint i = 0; i < SAMPLES_PER_CYCLE; i++) {
+        for (i = 0; i < SAMPLES_PER_CYCLE; i++) {
             set_dac_value(waveform[i]);
             busy_wait_us(delay_us);
         }
@@ -80,3 +89,4 @@ int main() {
 
     return 0;
 }
+
