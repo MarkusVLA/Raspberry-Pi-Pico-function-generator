@@ -41,3 +41,8 @@ Now you can run the makefile to compile the program.
 ```bash
 make
 ```
+Connect the GPIO pins 0 to 7 to the ADC and upload the compiled firmware.
+
+![alt text](https://raw.githubusercontent.com/MarkusVLA/Raspberry-Pi-Pico-function-generator/main/img/scope.jpg)
+Vout in oscilloscope
+
